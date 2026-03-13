@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import blogService from '../services/blogs'
 
-const BlogForm = ({ blogs, setBlogs, setNotification }) => {
+const BlogForm = ({ createBlog, setNotification }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [url, setUrl] = useState('')
@@ -10,9 +9,7 @@ const BlogForm = ({ blogs, setBlogs, setNotification }) => {
     event.preventDefault()
 
     try {
-      const returnedBlog = await blogService.create({ title, author, url })
-      setBlogs(blogs.concat(returnedBlog))
-
+      await createBlog({ title, author, url })
       setNotification({
         message: `a new blog ${title} added`,
         isSuccessful: true,

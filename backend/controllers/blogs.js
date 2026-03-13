@@ -46,11 +46,18 @@ blogsRouter.delete('/:id', async (request, response) => {
 blogsRouter.put('/:id', async (request, response) => {
   const body = request.body
 
+  if (!request.user) {
+    return response.status(401).json({ error: 'token missing or invalid' })
+  }
+
   if (!body.likes) {
     return response.status(400).json({ error: 'likes are required' })
   }
 
-  const blog = await Blog.findById(request.params.id)
+  const blog = await Blog.findById(request.params.id).populate('user', {
+    username: 1,
+    name: 1,
+  })
 
   if (!blog) return response.status(404).end()
   blog.likes = body.likes

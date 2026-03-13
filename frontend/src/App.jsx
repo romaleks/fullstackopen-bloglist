@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Blog from './components/Blog'
 import LoginForm from './components/LoginForm'
 import blogService from './services/blogs'
 import BlogForm from './components/BlogForm'
 import Notification from './components/Notification'
+import Togglable from './components/Togglable'
 
 const App = () => {
   const [user, setUser] = useState(null)
   const [blogs, setBlogs] = useState([])
   const [notification, setNotification] = useState(null)
+
+  const blogFormRef = useRef()
 
   useEffect(() => {
     blogService.getAll().then((blogs) => setBlogs(blogs))
@@ -28,6 +31,12 @@ const App = () => {
     setUser(null)
   }
 
+  const createBlog = async (blogObject) => {
+    const returnedBlog = await blogService.create(blogObject)
+    setBlogs(blogs.concat(returnedBlog))
+    blogFormRef.current.toggleVisibility()
+  }
+
   return (
     <div>
       {!user && (
@@ -43,14 +52,23 @@ const App = () => {
           <p>
             {user.name} logged in <button onClick={handleLogout}>logout</button>
           </p>
-          <BlogForm
-            blogs={blogs}
-            setBlogs={setBlogs}
-            setNotification={setNotification}
-          />
-          {blogs.map((blog) => (
-            <Blog key={blog.id} blog={blog} />
-          ))}
+          <Togglable buttonLabel="create new blog" ref={blogFormRef}>
+            <BlogForm
+              createBlog={createBlog}
+              setNotification={setNotification}
+            />
+          </Togglable>
+          {blogs
+            .sort((a, b) => b.likes - a.likes)
+            .map((blog) => (
+              <Blog
+                key={blog.id}
+                blog={blog}
+                blogs={blogs}
+                setBlogs={setBlogs}
+                user={user}
+              />
+            ))}
         </div>
       )}
     </div>
