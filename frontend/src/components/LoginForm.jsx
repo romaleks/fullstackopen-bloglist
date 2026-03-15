@@ -22,10 +22,15 @@ const LoginForm = ({ setUser, setNotification }) => {
 
       const errorMessage = error.response?.data?.error || 'Wrong credentials'
 
+      console.log(errorMessage)
+
       setNotification({
         message: errorMessage,
         isSuccessful: false,
       })
+      setTimeout(() => {
+        setNotification(null)
+      }, 3000)
     }
   }
 

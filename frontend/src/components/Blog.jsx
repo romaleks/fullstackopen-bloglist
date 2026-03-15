@@ -31,7 +31,7 @@ const Blog = ({ blog, blogs, setBlogs, user }) => {
   }
 
   return (
-    <div style={blogStyle}>
+    <div style={blogStyle} data-testid="blog-item">
       <div>
         {blog.title} {blog.author}
         <button onClick={() => setIsDetailsShown(!isDetailsShown)}>
