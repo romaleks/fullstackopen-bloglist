@@ -1,17 +1,21 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
 
+const BLOG_USER_POPULATE = { username: 1, name: 1 }
+const populateBlogUser = (blogOrQuery) =>
+  blogOrQuery.populate('user', BLOG_USER_POPULATE)
+
 blogsRouter.get('/', async (request, response) => {
-  const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
+  const blogs = await populateBlogUser(Blog.find({}))
   response.json(blogs)
 })
 
 blogsRouter.post('/', async (request, response) => {
-  const body = request.body
-
   if (!request.user) {
     return response.status(401).json({ error: 'token missing or invalid' })
   }
+
+  const body = request.body
 
   const blog = new Blog({ ...body, user: request.user._id })
 
@@ -19,7 +23,7 @@ blogsRouter.post('/', async (request, response) => {
   request.user.blogs = request.user.blogs.concat(savedBlog._id)
   await request.user.save()
 
-  await savedBlog.populate('user', { username: 1, name: 1 })
+  await populateBlogUser(savedBlog)
   response.status(201).json(savedBlog)
 })
 
@@ -45,23 +49,40 @@ blogsRouter.delete('/:id', async (request, response) => {
 })
 
 blogsRouter.put('/:id', async (request, response) => {
-  const body = request.body
-
   if (!request.user) {
     return response.status(401).json({ error: 'token missing or invalid' })
   }
 
-  if (!body.likes) {
+  const body = request.body
+
+  if (body.likes === undefined) {
     return response.status(400).json({ error: 'likes are required' })
   }
 
-  const blog = await Blog.findById(request.params.id).populate('user', {
-    username: 1,
-    name: 1,
-  })
+  const blog = await populateBlogUser(Blog.findById(request.params.id))
 
   if (!blog) return response.status(404).end()
   blog.likes = body.likes
+
+  const result = await blog.save()
+  response.json(result)
+})
+
+blogsRouter.post('/:id/comments', async (request, response) => {
+  if (!request.user) {
+    return response.status(401).json({ error: 'token missing or invalid' })
+  }
+
+  const body = request.body
+
+  if (!body.content) {
+    return response.status(400).json({ error: 'comment is required' })
+  }
+
+  const blog = await populateBlogUser(Blog.findById(request.params.id))
+
+  if (!blog) return response.status(404).end()
+  blog.comments = blog.comments.concat(body.content)
 
   const result = await blog.save()
   response.json(result)

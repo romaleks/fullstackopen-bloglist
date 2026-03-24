@@ -1,74 +1,74 @@
-import { useState, useEffect, useRef } from 'react'
-import Blog from './components/Blog'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { Route, Routes, useMatch } from 'react-router-dom'
 import LoginForm from './components/LoginForm'
-import blogService from './services/blogs'
-import BlogForm from './components/BlogForm'
+import Navigation from './components/Navigation'
 import Notification from './components/Notification'
-import Togglable from './components/Togglable'
+import Blog from './pages/Blog'
+import Home from './pages/Home'
+import User from './pages/User'
+import Users from './pages/Users'
+import { setUser } from './reducers/userReducer'
+import blogService from './services/blogs'
+import userService from './services/users'
 
 const App = () => {
-  const [user, setUser] = useState(null)
-  const [blogs, setBlogs] = useState([])
-  const [notification, setNotification] = useState(null)
+  const user = useSelector(({ user }) => user)
 
-  const blogFormRef = useRef()
+  const usersQuery = useQuery({
+    queryKey: ['users'],
+    queryFn: userService.getAll,
+  })
+  const users = usersQuery.data ?? []
+
+  const blogsQuery = useQuery({
+    queryKey: ['blogs'],
+    queryFn: blogService.getAll,
+  })
+  const blogs = blogsQuery.data ?? []
+
+  const dispatch = useDispatch()
+
+  const userMatch = useMatch('/users/:id')
+  const blogMatch = useMatch('/blogs/:id')
 
   useEffect(() => {
-    blogService.getAll().then((blogs) => setBlogs(blogs))
-  }, [])
-
-  useEffect(() => {
-    const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
+    const loggedUserJSON = localStorage.getItem('loggedBlogAppUser')
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON)
       blogService.setToken(user.token)
-      setUser(user)
+      dispatch(setUser(user))
     }
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('loggedBlogappUser')
-    setUser(null)
-  }
+  const foundUser = userMatch
+    ? users.find((user) => user.id === userMatch.params.id)
+    : null
 
-  const createBlog = async (blogObject) => {
-    const returnedBlog = await blogService.create(blogObject)
-    setBlogs(blogs.concat(returnedBlog))
-    blogFormRef.current.toggleVisibility()
-  }
+  const foundBlog = blogMatch
+    ? blogs.find((blog) => blog.id === blogMatch.params.id)
+    : null
 
   return (
     <div>
-      {notification && <Notification message={notification} />}
+      <Notification />
       {!user && (
         <div>
           <h2>Log in to application</h2>
-          <LoginForm setUser={setUser} setNotification={setNotification} />
+          <LoginForm />
         </div>
       )}
       {user && (
         <div>
           <h2>Blogs</h2>
-          <p>
-            {user.name} logged in <button onClick={handleLogout}>logout</button>
-          </p>
-          <Togglable buttonLabel="create new blog" ref={blogFormRef}>
-            <BlogForm
-              createBlog={createBlog}
-              setNotification={setNotification}
-            />
-          </Togglable>
-          {blogs
-            .sort((a, b) => b.likes - a.likes)
-            .map((blog) => (
-              <Blog
-                key={blog.id}
-                blog={blog}
-                blogs={blogs}
-                setBlogs={setBlogs}
-                user={user}
-              />
-            ))}
+          <Navigation />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/users/:id" element={<User user={foundUser} />} />
+            <Route path="/blogs/:id" element={<Blog blog={foundBlog} />} />
+          </Routes>
         </div>
       )}
     </div>

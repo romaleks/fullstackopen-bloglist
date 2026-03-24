@@ -1,37 +1,36 @@
+import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
-import loginService from '../services/login'
+import { useDispatch } from 'react-redux'
+import { setNotification } from '../reducers/notificationReducer'
+import { setUser } from '../reducers/userReducer'
 import blogService from '../services/blogs'
+import loginService from '../services/login'
 
-const LoginForm = ({ setUser, setNotification }) => {
+const LoginForm = () => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleLogin = async (event) => {
-    event.preventDefault()
+  const dispatch = useDispatch()
 
-    try {
-      const user = await loginService.login({ username, password })
-
-      window.localStorage.setItem('loggedBlogappUser', JSON.stringify(user))
+  const loginMutation = useMutation({
+    mutationFn: loginService.login,
+    onSuccess: (user) => {
+      window.localStorage.setItem('loggedBlogAppUser', JSON.stringify(user))
       blogService.setToken(user.token)
-      setUser(user)
+      dispatch(setUser(user))
+
       setUsername('')
       setPassword('')
-    } catch (error) {
-      console.log('Login error:', error)
-
+    },
+    onError: (error) => {
       const errorMessage = error.response?.data?.error || 'Wrong credentials'
+      dispatch(setNotification(errorMessage, false, 5))
+    },
+  })
 
-      console.log(errorMessage)
-
-      setNotification({
-        message: errorMessage,
-        isSuccessful: false,
-      })
-      setTimeout(() => {
-        setNotification(null)
-      }, 3000)
-    }
+  const handleLogin = (event) => {
+    event.preventDefault()
+    loginMutation.mutate({ username, password })
   }
 
   return (

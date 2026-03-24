@@ -1,35 +1,38 @@
 import { useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { setNotification } from '../reducers/notificationReducer'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import blogService from '../services/blogs'
 
-const BlogForm = ({ createBlog, setNotification }) => {
+const BlogForm = ({ blogFormRef }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [url, setUrl] = useState('')
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const queryClient = useQueryClient()
+  const dispatch = useDispatch()
 
-    try {
-      await createBlog({ title, author, url })
-      setNotification({
-        message: `a new blog ${title} added`,
-        isSuccessful: true,
-      })
-      setTimeout(() => {
-        setNotification(null)
-      }, 3000)
+  const newBlogMutation = useMutation({
+    mutationFn: blogService.create,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['blogs'] })
+      dispatch(setNotification(`a new blog ${variables.title} added`, true, 5))
 
       setTitle('')
       setAuthor('')
       setUrl('')
-    } catch (error) {
+      blogFormRef?.current?.toggleVisibility()
+    },
+    onError: (error) => {
       const errorMessage =
         error.response?.data?.error || error.message || 'An error occurred'
+      dispatch(setNotification(errorMessage, false, 5))
+    },
+  })
 
-      setNotification({
-        message: errorMessage,
-        isSuccessful: false,
-      })
-    }
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    newBlogMutation.mutate({ title, author, url })
   }
 
   return (

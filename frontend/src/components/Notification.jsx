@@ -1,8 +1,12 @@
-const Notification = ({ message }) => {
-  if (!message) return null
+import { useSelector } from 'react-redux'
+
+const Notification = () => {
+  const notification = useSelector(({ notification }) => notification)
+
+  if (!notification) return null
 
   const notificationStyle = {
-    color: message.isSuccessful ? 'green' : 'red',
+    color: notification.isSuccessful ? 'green' : 'red',
     background: 'lightgrey',
     fontSize: '20px',
     borderStyle: 'solid',
@@ -13,7 +17,7 @@ const Notification = ({ message }) => {
 
   return (
     <div data-testid={'notification'} style={notificationStyle}>
-      {message.message}
+      {notification.message}
     </div>
   )
 }
